@@ -23,6 +23,8 @@
       --campo:#1A2436; --credito:#5CC28E; --debito:#F08A80; --focus:#8FB0FF;
     }
   }
+  :root{color-scheme:light dark}
+  [hidden]{display:none !important}
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
@@ -107,14 +109,14 @@
       <div class="riga-input">
         <input id="ingresso" type="time" inputmode="numeric">
       </div>
-      <button class="ora-adesso" data-target="ingresso" style="margin-top:6px">Timbra ora</button>
+      <button class="ora-adesso" data-target="ingresso" style="margin-top:6px">Usa l'ora attuale</button>
     </div>
     <div class="campo">
       <label for="uscita">Uscita effettiva</label>
       <div class="riga-input">
         <input id="uscita" type="time" inputmode="numeric">
       </div>
-      <button class="ora-adesso" data-target="uscita" style="margin-top:6px">Timbra ora</button>
+      <button class="ora-adesso" data-target="uscita" style="margin-top:6px">Usa l'ora attuale</button>
     </div>
   </div>
 
@@ -241,9 +243,16 @@
   $('soglia').value = num(s.soglia, DEF.soglia);
   if(s.data === oggi()){ $('ingresso').value = s.ingresso || ''; $('uscita').value = s.uscita || ''; }
 
-  ['ingresso','uscita','lavoro','pausa','soglia'].forEach(id => $(id).addEventListener('input', calcola));
+  ['ingresso','uscita','lavoro','pausa','soglia'].forEach(id => {
+    $(id).addEventListener('input', calcola);
+    $(id).addEventListener('change', calcola); // alcuni iPhone aggiornano solo alla chiusura del selettore
+  });
   document.querySelectorAll('.ora-adesso').forEach(b => b.addEventListener('click', () => {
-    $(b.dataset.target).value = aOra(adesso()); calcola();
+    const campo = $(b.dataset.target);
+    const nuova = aOra(adesso());
+    if(campo.value && campo.value !== nuova &&
+       !confirm(`Sostituire ${campo.value} con l'ora attuale (${nuova})?`)) return;
+    campo.value = nuova; calcola();
   }));
   $('reset').addEventListener('click', () => { $('ingresso').value=''; $('uscita').value=''; calcola(); });
 
