@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Uscita</title>
+<meta name="theme-color" content="#16233B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Uscita">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+  :root{
+    --carta:#E6ECEF; --inchiostro:#16233B; --tenue:#5E6B7A; --riga:#B7C3CB;
+    --campo:#F5F8F9; --credito:#1F6F4A; --debito:#A5281F; --focus:#2F5FD0;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --carta:#121A28; --inchiostro:#E8EDF2; --tenue:#98A5B4; --riga:#2C3A4F;
+      --campo:#1A2436; --credito:#5CC28E; --debito:#F08A80; --focus:#8FB0FF;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--carta); color:var(--inchiostro);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-variant-numeric:tabular-nums;
+    padding:calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 28px);
+    min-height:100vh;
+  }
+  main{max-width:440px;margin:0 auto}
+
+  /* Il cartellino: l'unico elemento "forte" della pagina */
+  .cartellino{
+    border:2px solid var(--inchiostro); border-radius:6px;
+    padding:18px 18px 16px; position:relative;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 31px, var(--riga) 31px 32px);
+  }
+  .cartellino::before{ /* foro della timbratrice */
+    content:""; position:absolute; top:14px; right:16px;
+    width:14px; height:14px; border-radius:50%;
+    border:2px solid var(--inchiostro); background:var(--carta);
+  }
+  .etichetta{font-size:15px;color:var(--tenue);margin:0}
+  .ora-uscita{
+    font-size:clamp(76px,26vw,112px); line-height:1; font-weight:800;
+    letter-spacing:-0.04em; margin:6px 0 4px;
+  }
+  .ora-uscita.vuota{color:var(--riga)}
+  .stato{font-size:16px;margin:0;min-height:1.4em}
+
+  .campi{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+  .campo{min-width:0}
+  .campo label{display:block;font-size:14px;color:var(--tenue);margin-bottom:6px}
+  .riga-input{display:flex;gap:6px}
+  input[type=time],input[type=number]{
+    width:100%; min-width:0; font:inherit; font-size:24px; font-weight:600;
+    color:var(--inchiostro); background:var(--campo);
+    border:1.5px solid var(--riga); border-radius:6px; padding:10px 8px;
+    -webkit-appearance:none; appearance:none;
+  }
+  input[type=number]{font-size:18px}
+  button{
+    font:inherit; color:var(--inchiostro); background:transparent;
+    border:1.5px solid var(--inchiostro); border-radius:6px;
+    padding:8px 10px; cursor:pointer;
+  }
+  .ora-adesso{font-size:14px;padding:6px 10px;white-space:nowrap;width:100%}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+  .bilancio{
+    margin-top:22px; padding:14px 0 0; border-top:2px solid var(--inchiostro);
+    display:grid; grid-template-columns:1fr auto; row-gap:8px; font-size:17px;
+  }
+  .bilancio dt{color:var(--tenue)}
+  .bilancio dd{margin:0;text-align:right;font-weight:600}
+  .flex-valore{font-size:30px;font-weight:800}
+  .credito{color:var(--credito)} .debito{color:var(--debito)}
+
+  .azioni{margin-top:22px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  details{margin-top:26px;border-top:1px solid var(--riga);padding-top:12px}
+  summary{cursor:pointer;color:var(--tenue);font-size:15px}
+  .impostazioni{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .nota{font-size:13px;color:var(--tenue);margin-top:10px;line-height:1.45}
+  @media (prefers-reduced-motion: no-preference){
+    .timbro{animation:timbro .35s ease-out}
+    @keyframes timbro{from{transform:scale(1.06);opacity:.4}to{transform:none;opacity:1}}
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="cartellino" aria-live="polite">
+    <p class="etichetta">Puoi uscire alle</p>
+    <div id="oraUscita" class="ora-uscita vuota">--:--</div>
+    <p id="stato" class="stato">Inserisci l'orario di ingresso.</p>
+  </section>
+
+  <div class="campi">
+    <div class="campo">
+      <label for="ingresso">Ingresso</label>
+      <div class="riga-input">
+        <input id="ingresso" type="time" inputmode="numeric">
+      </div>
+      <button class="ora-adesso" data-target="ingresso" style="margin-top:6px">Timbra ora</button>
+    </div>
+    <div class="campo">
+      <label for="uscita">Uscita effettiva</label>
+      <div class="riga-input">
+        <input id="uscita" type="time" inputmode="numeric">
+      </div>
+      <button class="ora-adesso" data-target="uscita" style="margin-top:6px">Timbra ora</button>
+    </div>
+  </div>
+
+  <dl id="bilancio" class="bilancio" hidden>
+    <dt>Ore lavorate</dt><dd id="lavorate">–</dd>
+    <dt>Buono pasto</dt><dd id="buono">–</dd>
+    <dt id="flexLabel">Flessibilità</dt><dd id="flex" class="flex-valore">–</dd>
+  </dl>
+
+  <div class="azioni">
+    <button id="reset">Nuova giornata</button>
+  </div>
+
+  <details>
+    <summary>Impostazioni orario</summary>
+    <div class="impostazioni">
+      <div class="campo">
+        <label for="lavoro">Lavoro (minuti)</label>
+        <input id="lavoro" type="number" min="0" max="720" step="1">
+      </div>
+      <div class="campo">
+        <label for="pausa">Pausa pranzo (minuti)</label>
+        <input id="pausa" type="number" min="0" max="180" step="1">
+      </div>
+      <div class="campo">
+        <label for="soglia">Buono pasto da (minuti di presenza)</label>
+        <input id="soglia" type="number" min="0" max="720" step="1">
+      </div>
+    </div>
+    <p class="nota">Predefinito: 432 minuti (7h12) di lavoro più 30 di pausa. Il buono pasto matura dopo 390 minuti (6h30) dall'ingresso; sotto questa soglia la pausa non viene scalata dalle ore lavorate. I dati restano solo su questo telefono.</p>
+  </details>
+</main>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const DEF = {lavoro:432, pausa:30, soglia:390};
+  const KEY = 'uscita-v1';
+  const oggi = () => { const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); };
+
+  // Salvataggio locale protetto: se non disponibile l'app funziona comunque
+  function carica(){
+    try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; }
+  }
+  function salva(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify({
+        data:oggi(), ingresso:$('ingresso').value, uscita:$('uscita').value,
+        lavoro:num($('lavoro').value, DEF.lavoro), pausa:num($('pausa').value, DEF.pausa),
+        soglia:num($('soglia').value, DEF.soglia)
+      }));
+    }catch(e){}
+  }
+  const num = (v,d) => { const n = parseInt(v,10); return isNaN(n) || n < 0 ? d : n; };
+  const aMin = s => { if(!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+  const aOra = m => { m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+  const durata = m => { const a=Math.abs(m), h=Math.floor(a/60), r=a%60; return h ? `${h} h ${String(r).padStart(2,'0')} min` : `${r} min`; };
+  const adesso = () => { const d=new Date(); return d.getHours()*60+d.getMinutes(); };
+
+  let ultimaUscita = null;
+
+  function calcola(){
+    const lav = num($('lavoro').value, DEF.lavoro);
+    const pau = num($('pausa').value, DEF.pausa);
+    const sog = num($('soglia').value, DEF.soglia);
+    const ing = aMin($('ingresso').value);
+    const usc = aMin($('uscita').value);
+    const box = $('oraUscita'), stato = $('stato');
+
+    if(ing === null){
+      box.textContent='--:--'; box.classList.add('vuota');
+      stato.textContent="Inserisci l'orario di ingresso.";
+      $('bilancio').hidden = true; ultimaUscita=null; salva(); return;
+    }
+
+    const target = ing + lav + pau;
+    const testo = aOra(target);
+    box.classList.remove('vuota');
+    if(testo !== ultimaUscita){
+      box.textContent = testo;
+      box.classList.remove('timbro'); void box.offsetWidth; box.classList.add('timbro');
+      ultimaUscita = testo;
+    }
+
+    if(usc === null){
+      $('bilancio').hidden = true;
+      const ora = adesso();
+      const diff = target - ora;
+      const buonoDa = ing + sog;
+      if(diff > 0){
+        stato.textContent = ora < buonoDa
+          ? `Mancano ${durata(diff)}. Buono pasto dalle ${aOra(buonoDa)}.`
+          : `Mancano ${durata(diff)}. Buono pasto maturato.`;
+      }
+      else if(diff === 0) stato.textContent = 'Orario completo adesso.';
+      else stato.innerHTML = `Orario completo. Flessibilità in corso: <strong class="credito">+${durata(diff)}</strong>`;
+    } else {
+      if(usc < ing){
+        stato.textContent = "L'uscita è prima dell'ingresso: controlla gli orari.";
+        $('bilancio').hidden = true; salva(); return;
+      }
+      const presenza = usc - ing;
+      const buono = presenza >= sog;
+      // Sotto la soglia del buono la pausa non si considera fatta
+      const lavorate = buono ? Math.max(0, presenza - pau) : presenza;
+      const saldo = lavorate - lav;
+      stato.textContent = 'Giornata timbrata.';
+      $('bilancio').hidden = false;
+      $('lavorate').textContent = durata(lavorate);
+      $('buono').textContent = buono ? 'Maturato' : `Non maturato (da ${aOra(ing + sog)})`;
+      const f = $('flex');
+      f.classList.remove('credito','debito');
+      if(saldo > 0){ $('flexLabel').textContent='Flessibilità accumulata'; f.textContent='+'+durata(saldo); f.classList.add('credito'); }
+      else if(saldo < 0){ $('flexLabel').textContent='Da recuperare'; f.textContent='−'+durata(saldo); f.classList.add('debito'); }
+      else { $('flexLabel').textContent='Flessibilità'; f.textContent='0 min'; }
+    }
+    salva();
+  }
+
+  // Stato iniziale
+  const s = carica();
+  $('lavoro').value = num(s.lavoro, DEF.lavoro);
+  $('pausa').value = num(s.pausa, DEF.pausa);
+  $('soglia').value = num(s.soglia, DEF.soglia);
+  if(s.data === oggi()){ $('ingresso').value = s.ingresso || ''; $('uscita').value = s.uscita || ''; }
+
+  ['ingresso','uscita','lavoro','pausa','soglia'].forEach(id => $(id).addEventListener('input', calcola));
+  document.querySelectorAll('.ora-adesso').forEach(b => b.addEventListener('click', () => {
+    $(b.dataset.target).value = aOra(adesso()); calcola();
+  }));
+  $('reset').addEventListener('click', () => { $('ingresso').value=''; $('uscita').value=''; calcola(); });
+
+  // Se l'app resta aperta a cavallo della mezzanotte o torna in primo piano
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden){
+      const c = carica();
+      if(c.data && c.data !== oggi()){ $('ingresso').value=''; $('uscita').value=''; }
+      calcola();
+    }
+  });
+  setInterval(calcola, 30000);
+  calcola();
+
+  // Funzionamento offline (solo quando pubblicata online)
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>
